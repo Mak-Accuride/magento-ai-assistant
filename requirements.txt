@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+langchain
+sentence-transformers
+faiss-cpu
+requests
+pydantic
+python-dotenv
+loguru
