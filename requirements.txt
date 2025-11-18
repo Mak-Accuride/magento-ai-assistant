@@ -82,3 +82,5 @@ xxhash==3.6.0
 zstandard==0.25.0
 typer
 pandas
+langchain-community
+langchain-huggingface
