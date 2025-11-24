@@ -32,13 +32,13 @@ class SemanticSearcher:
         faiss.normalize_L2(emb)
         return emb
 
-    def search(self, query: str, top_k: int = 5):
+    def search(self, query: str, top_k: int = 50):
         print(f"\n🔎 Searching for: \"{query}\"")
 
         q_emb = self.encode_query(query)
 
         distances, indices = self.index.search(q_emb, top_k)
-
+        print(distances , indices)
         results = []
         for rank, idx in enumerate(indices[0]):
             if idx == -1:

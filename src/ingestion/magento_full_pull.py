@@ -78,8 +78,8 @@ if __name__ == "__main__":
     for p in products:
         structured_products.append(build_structured_product(p))
 
-    os.makedirs("data/processed", exist_ok=True)
-    output_path = "data/processed/magento_products_full.json"
+    os.makedirs("data/raw/products", exist_ok=True)
+    output_path = "data/raw/magento_products_full.json"
 
     with open(output_path, "w") as f:
         json.dump(structured_products, f, indent=2)
