@@ -4,11 +4,11 @@ import os
 import json
 
 # ---------- CONFIG ----------
-PDF_FOLDER = "data/samples"
-RAW_OUTPUT_FOLDER = "data/raw/pdfs"
-STRUCTURED_OUTPUT_EN_FILE = "data/processed/clean_pdf_json/product_specs_en.json"
-STRUCTURED_OUTPUT_FR_FILE = "data/processed/clean_pdf_json/product_specs_fr.json"
-STRUCTURED_OUTPUT_DE_FILE = "data/processed/clean_pdf_json/product_specs_de.json"
+PDF_FOLDER = "scripts/pdf/datasheets"
+RAW_OUTPUT_FOLDER = "data/raw/pdfs/datasheets"
+STRUCTURED_OUTPUT_EN_FILE = "data/datasheets/processed/clean_pdf_json/product_specs_en.json"
+STRUCTURED_OUTPUT_FR_FILE = "data/datasheets//processed/clean_pdf_json/product_specs_fr.json"
+STRUCTURED_OUTPUT_DE_FILE = "data/datasheets//processed/clean_pdf_json/product_specs_de.json"
 
 # ---------- HELPER FUNCTIONS ----------
 def extract_text_from_pdf(pdf_path):
@@ -32,7 +32,7 @@ def infer_sku_from_text(text):
 def separate_languages(text):
     """Separate English, French, and German sections using line-by-line keyword matching."""
     lang_blocks = {'en': [], 'fr': [], 'de': [], 'shared': []}
-    lines = text.strip().split('\n')
+    lines = [line.rstrip() for line in text.split('\n') if line.strip()]    
 
     en_keywords = {"Load Rating", "Slide Extension", "Slide Height", "Temperature Range", "Permitted Mounting", "Features", "Notes", "Recommended Accessories", "Material and Surface", "Fixing", "High grade stainless steel", "Load rating up to", "100% extension"}
     fr_keywords = {"Charge jusqu’à", "Course", "Épaisseur de glissière", "Température d’utilisation", "Montage autorisé", "Fonctions", "Notes", "Accessoires Recommandés", "Matériau et Surface", "Fixation", "Acier inoxydable haute qualité", "Utilisable pour des températures", "Charge jusqu’à 80kg par paire"}

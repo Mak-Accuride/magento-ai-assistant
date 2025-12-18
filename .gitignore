@@ -117,3 +117,10 @@ Thumbs.db
 *.key
 *.pem
 *.env
+
+.venv
+
+datasheets/
+installation_guides/
+# Ignore installation guide PDFs
+scripts/pdf/installation_guides/
