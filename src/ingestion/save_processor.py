@@ -8,6 +8,7 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
+import re
 
 PROCESSED_DIR = Path("data/processed")
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
@@ -23,7 +24,7 @@ def load_cleaned_data(input_path: Optional[Path] = None) -> pd.DataFrame:
         pd.DataFrame: Loaded DataFrame.
     """
     if input_path is None:
-        input_path = PROCESSED_DIR / "clean_products.json"
+        input_path = PROCESSED_DIR / "clean_products_with_pdf.json"
     
     if not input_path.exists():
         raise FileNotFoundError(f"Cleaned data not found at {input_path}. Run preprocessor first.")
@@ -50,6 +51,21 @@ def embed_keys_and_timestamps(df: pd.DataFrame) -> pd.DataFrame:
     print(f"Keys and timestamps embedded; indexed on {len(df)} product_ids")
     return df
 
+def clean_nested_strings(row: pd.Series) -> pd.Series:
+    """Clean whitespace and escapes in nested fields."""
+    row = row.copy()
+    for col in ['inherited_specs', 'pdf_specs', 'capacity', 'dimensions']:
+        if col in row and isinstance(row[col], dict):
+            if 'features_summary' in row[col]:
+                text = row[col]['features_summary']
+                # Normalize line breaks and strip extras
+                if text is not None:  # Add null check
+                    text = re.sub(r'\n+', '\n', text).strip()
+                    row[col]['features_summary'] = text
+                else:
+                    row[col]['features_summary'] = ""
+    return row
+
 def serialize_nested_for_csv(row: pd.Series) -> pd.Series:
     """
     Serialize nested dicts (e.g., capacity, dimensions) to strings for CSV compatibility.
@@ -61,7 +77,8 @@ def serialize_nested_for_csv(row: pd.Series) -> pd.Series:
         pd.Series: Modified row with serialized nests.
     """
     row = row.copy()
-    for col in ['capacity', 'dimensions']:
+    row = clean_nested_strings(row)
+    for col in ['capacity', 'dimensions', 'inherited_specs', 'pdf_specs']:
         if col in row and isinstance(row[col], dict):
             row[col] = str(row[col])
     return row
