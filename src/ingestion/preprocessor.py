@@ -8,8 +8,30 @@ from typing import Dict, Any, List
 
 RAW_DIR = Path("data/raw")
 PROCESSED_DIR = Path("data/processed")
-PDF_EN_FILE = Path("data/datasheets/processed/clean_pdf_json/product_specs_en.json")  # English only
+PDF_EN_FILE = Path("data/datasheets/processed/clean_pdf_json/product_specs_en_fixed.json")  # English only
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)  # Ensure folder exists
+
+def normalize_sku_for_lookup(sku: str) -> str:
+    """
+    Robust normalization for SKU to match PDF lookup keys.
+    Examples:
+    DZ4501EC      -> DZ4501-EC
+    DZ45010060EC  -> DZ4501-0060EC
+    DZ4501-60EC   -> DZ4501-0060EC
+    """
+    if not sku:
+        return sku
+
+    # Ensure there's a hyphen before the last alpha suffix (EC, TR, etc.)
+    m = re.match(r"(DZ\d{4})(?:-?(\d{2,4}))?([A-Z]+)$", sku)
+    if m:
+        base, length, suffix = m.groups()
+        if length:
+            length = length.zfill(4)  # pad to 4 digits if needed
+            return f"{base}-{length}{suffix}"
+        else:
+            return f"{base}-{suffix}"
+    return sku
 
 def load_pdf_specs_en() -> Dict[str, Dict[str, Any]]:
     """Load only English structured PDF specs and create SKU lookup."""
@@ -23,12 +45,29 @@ def load_pdf_specs_en() -> Dict[str, Dict[str, Any]]:
         specs_list = json.load(f)
 
     for spec in specs_list:
-        sku = spec.get("product_id") or spec.get("sku")
-        if sku:
-            pdf_lookup[sku] = spec
+        parent_sku = normalize_sku_for_lookup(spec.get("product_id") or spec.get("sku"))
+        if parent_sku != spec.get("product_id"):
+            print(f"⚠️ PDF parent SKU corrected: {spec.get('product_id')} -> {parent_sku}")
+            spec["product_id"] = parent_sku
+
+        # Normalize all model SKUs inside
+        if "model" in spec and isinstance(spec["model"], list):
+            for model_entry in spec["model"]:
+                model_sku = model_entry.get("model")
+                if model_sku:
+                    normalized_model_sku = normalize_sku_for_lookup(model_sku)
+                    if normalized_model_sku != model_sku:
+                        print(f"⚠️ PDF model SKU corrected: {model_sku} -> {normalized_model_sku}")
+                        model_entry["model"] = normalized_model_sku
+
+        # Use the normalized parent SKU as lookup key
+        pdf_lookup[parent_sku] = spec
+
 
     print(f"✅ Loaded English PDF specs for {len(pdf_lookup)} products")
     return pdf_lookup
+
+
 
 def clean_escapes(text):
     """Replace common Unicode escape sequences with actual characters."""
@@ -80,29 +119,6 @@ def get_parent_sku(sku: str) -> str:
 
     return sku
 
-def build_parent_index(products):
-    """
-    Parents are products that actually have pdf_specs.
-    """
-    return {
-        p["sku"]: p
-        for p in products
-        if p.get("sku") and p.get("pdf_specs")
-    }
-
-def find_parent(product_sku: str, parents: Dict[str, Dict[str, Any]]):
-    """
-    Find the closest parent by longest SKU prefix match.
-    """
-    matches = [
-        psku for psku in parents
-        if product_sku == psku or product_sku.startswith(psku + "-")
-    ]
-    if not matches:
-        return None
-    return parents[max(matches, key=len)]
-
-
 def identify_parents_and_children(products: List[Dict[str, Any]], pdf_lookup: Dict[str, Dict[str, Any]]) -> tuple[Dict[str, Dict], Dict[str, List[Dict]]]:
     """
     Identify parent products (those with rich description/features or pdf_specs)
@@ -136,18 +152,12 @@ def propagate_shared_data(
     pdf_lookup: Dict[str, Dict[str, Any]]
 ) -> List[Dict[str, Any]]:
     """Propagate pdf_specs and key fields from parent to children."""
-    parents = build_parent_index(products)
-    # parents, children_by_parent = identify_parents_and_children(products,pdf_lookup)
+    parents, children_by_parent = identify_parents_and_children(products,pdf_lookup)
 
     enriched = []
     for prod in products:
         sku = prod.get("sku", "")
         if not sku:
-            enriched.append(prod)
-            continue
-            
-        parent = find_parent(sku, parents)
-        if not parent:
             enriched.append(prod)
             continue
         # base_match = re.search(r"([A-Z]+\d+)(?:-\d{4}(TR)?)?", sku)
@@ -168,7 +178,7 @@ def propagate_shared_data(
                 # "variants": parent["pdf_specs"].get("variants", [])  # Full variants list for post-retrieval lookup
             }
             prod.setdefault("inherited_specs", shared_specs)
-            print(f"Propagated shared specs to child {sku} from parent {base_sku}")
+            # print(f"Propagated shared specs to child {sku} from parent {base_sku}")
 
         enriched.append(prod)
 
@@ -233,7 +243,11 @@ def preprocess_all():
     pdf_lookup = load_pdf_specs_en()
     for item in flattened_items:
         sku = item.get("sku", "")
-        pdf_specs = pdf_lookup.get(sku)
+        
+        normalized_sku = normalize_sku_for_lookup(sku)
+        pdf_specs = pdf_lookup.get(normalized_sku)
+        if pdf_specs is None and normalized_sku != sku:
+            print(f"⚠️ SKU mismatch corrected: {sku} -> {normalized_sku}")
         if pdf_specs:
             pdf_specs_clean = {k: v for k, v in pdf_specs.items() if k not in ["product_id", "sku", "language"]}
             item["pdf_specs"] = pdf_specs_clean
