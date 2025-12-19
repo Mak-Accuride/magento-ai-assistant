@@ -30,47 +30,58 @@ def infer_sku_from_text(text):
     return match.group(0) if match else "unknown"
 
 def separate_languages(text):
-    """Separate English, French, and German sections using line-by-line keyword matching."""
+    """Improved separation for parallel multilingual PDFs (EN/FR/DE blocks)."""
     lang_blocks = {'en': [], 'fr': [], 'de': [], 'shared': []}
-    lines = [line.rstrip() for line in text.split('\n') if line.strip()]    
+    lines = [line.rstrip() for line in text.split('\n') if line.strip()]  # Clean lines
+    # Identify shared sections (tables, pure numbers, headers like SL/TR/A/B/etc.)
+    i = 0
+    while i < len(lines):
+        line_stripped = lines[i].strip()
+        if (re.match(r'^[\d,.-]+(\s+[\d,.-]+)*$', line_stripped) or
+        re.match(r'^[-]+$', line_stripped) or
+        re.match(r'^\d+$', line_stripped) or  # Pure integers (load ratings)
+        re.match(r'^[A-Z0-9]{1,3}$', line_stripped) or
+        line_stripped in ['SL', 'TR', 'A', 'B', 'C', 'D', 'W', 'L', 'mm', 'kg']):
+            # Capture table block
+            print(f"Found shared block at line {i}")
+            table_start = i
+            i += 1
+            while i < len(lines):
+                current = lines[i].strip()
+                if (
+                    re.match(r'^[\d,.-]+(\s+[\d,.-]+)*$', current) or
+                    current in ['-', '']
+                ):
+                    print(f"Line {i}: {current}")
+                    i += 1
+                else:
+                    break
 
-    en_keywords = {"Load Rating", "Slide Extension", "Slide Height", "Temperature Range", "Permitted Mounting", "Features", "Notes", "Recommended Accessories", "Material and Surface", "Fixing", "High grade stainless steel", "Load rating up to", "100% extension"}
-    fr_keywords = {"Charge jusqu’à", "Course", "Épaisseur de glissière", "Température d’utilisation", "Montage autorisé", "Fonctions", "Notes", "Accessoires Recommandés", "Matériau et Surface", "Fixation", "Acier inoxydable haute qualité", "Utilisable pour des températures", "Charge jusqu’à 80kg par paire"}
-    de_keywords = {"Lastwert bis", "Auszug der Schiene", "Schienenhöhe", "Temperaturbereich", "Mögliche Montageweise", "Funktionen", "Hinweise", "Empfohlenes Zubehör", "Material und Oberfläche", "Befestigung", "Hochwertiger Edelstahl", "Geeignet für Temperaturen", "Lastwert bis 80kg pro Paar"}
-
-    for line in lines:
-        line_lower = line.lower().strip()
-        if not line_lower:
+            lang_blocks['shared'].extend(lines[table_start:i])
             continue
+        print(f"Line {i}: {line_stripped}")
+        # Non-shared descriptive lines
+        lang_blocks['en' if len(lang_blocks['en']) <= len(lang_blocks['fr']) else 
+                    'fr' if len(lang_blocks['fr']) <= len(lang_blocks['de']) else 'de'].append(lines[i])
+        i += 1
+    print(f"Shared: {len(lang_blocks['shared'])}")
+    # Alternative robust method: Split non-shared lines into approximate thirds
+    non_shared = [line for line in lines if line not in lang_blocks['shared']]
+    third = len(non_shared) // 3
+    lang_blocks['en'] = non_shared[:third]
+    lang_blocks['fr'] = non_shared[third:2*third]
+    lang_blocks['de'] = non_shared[2*third:]
 
-        scores = {'en': 0, 'fr': 0, 'de': 0}
-        for word in line_lower.split():
-            if word in en_keywords:
-                scores['en'] += 1
-            if word in fr_keywords:
-                scores['fr'] += 1
-            if word in de_keywords:
-                scores['de'] += 1
+    # Re-append shared to all
+    shared_text = '\n'.join(lang_blocks['shared'])
+    for lang in ['en', 'fr', 'de']:
+        lang_blocks[lang] = '\n'.join(lang_blocks[lang] + lang_blocks['shared'])
 
-        if re.match(r'^[\d,.-]+(\s+[\d,.-]+)*$', line.strip()) or re.match(r'^[-]+$', line.strip()) or re.match(r'^[A-Z0-9]{1,3}$', line.strip()):
-            lang_blocks['shared'].append(line)
-        else:
-            max_lang = max(scores, key=scores.get)
-            if scores[max_lang] > 0:
-                lang_blocks[max_lang].append(line)
-            else:
-                lang_blocks['en'].append(line)
+    lang_blocks['shared'] = shared_text
 
-    # Build final dict
-    lang_text = {}
-    for l in ['en', 'fr', 'de']:
-        lang_text[l] = '\n'.join(lang_blocks[l] + lang_blocks['shared'])
-
-    lang_text['shared'] = '\n'.join(lang_blocks['shared'])  # ⭐ keep this!
-
-    detected = [l for l in lang_text if lang_text[l].strip()]
+    detected = [l for l in ['en', 'fr', 'de'] if lang_blocks[l].strip()]
     print(f"Detected languages: {', '.join(detected)}")
-    return lang_text
+    return {k: v for k, v in lang_blocks.items() if k == 'shared' or k in detected}
 
 def extract_common_variants(text):
     """Extract variants using the original full-text regex."""
@@ -306,38 +317,39 @@ def process_all_pdfs(pdf_folder, raw_output_folder, en_output_file, fr_output_fi
         print(f"📄 Processing {pdf_file} (SKU: {sku})...")
 
         full_text = extract_text_from_pdf(pdf_path)
+        print(f"✅ Extracted full text from {pdf_file}")
         if not full_text:
             continue
-
-        lang_split = separate_languages(full_text)
-
-        raw_output_file = os.path.join(raw_output_folder, f"{sku}_manual.json")
-        raw_data = {"sku": sku, **lang_split}
-        with open(raw_output_file, "w", encoding="utf-8") as f:
-            json.dump(raw_data, f, indent=2, ensure_ascii=False)
-        print(f"✅ Saved raw text to {raw_output_file}")
+        
+        # lang_split = separate_languages(full_text)
+        # print(f"✅ Separated languages from {pdf_file}")
+        # raw_output_file = os.path.join(raw_output_folder, f"{sku}_manual.json")
+        # # raw_data = {"sku": sku, **full_text}
+        # with open(raw_output_file, "w", encoding="utf-8") as f:
+        #     json.dump(raw_data, f, indent=2, ensure_ascii=False)
+        # print(f"✅ Saved raw text to {raw_output_file}")
 
         specs_en = {}
         specs_fr = {}
         specs_de = {}
 
-        if 'en' in lang_split and lang_split['en']:
-            specs_en = extract_detailed_specs_en(lang_split['en'], lang_split['shared'])
+        specs_en = extract_detailed_specs_en(full_text, full_text)
+        if specs_en:
             specs_en['product_id'] = sku
             specs_en['language'] = 'en'
             all_specs_en.append(specs_en)
 
-        if 'fr' in lang_split and lang_split['fr']:
-            specs_fr = extract_detailed_specs_fr(lang_split['fr'], lang_split['shared'])
-            specs_fr['product_id'] = sku
-            specs_fr['language'] = 'fr'
-            all_specs_fr.append(specs_fr)
-
-        if 'de' in lang_split and lang_split['de']:
-            specs_de = extract_detailed_specs_de(lang_split['de'], lang_split['shared'])
+        specs_de = extract_detailed_specs_de(full_text, full_text)
+        if specs_de:
             specs_de['product_id'] = sku
             specs_de['language'] = 'de'
             all_specs_de.append(specs_de)
+
+        specs_fr = extract_detailed_specs_fr(full_text, full_text)
+        if specs_fr:
+            specs_fr['product_id'] = sku
+            specs_fr['language'] = 'fr'
+            all_specs_fr.append(specs_fr)
 
         defined_specs = [s for s in [specs_en, specs_fr, specs_de] if s]
         total_fields = sum(len(s) for s in defined_specs)
