@@ -6,9 +6,9 @@ import json
 # ---------- CONFIG ----------
 PDF_FOLDER = "scripts/pdf/datasheets"
 RAW_OUTPUT_FOLDER = "data/raw/pdfs/datasheets"
-STRUCTURED_OUTPUT_EN_FILE = "data/datasheets/processed/clean_pdf_json/product_specs_en.json"
-STRUCTURED_OUTPUT_FR_FILE = "data/datasheets//processed/clean_pdf_json/product_specs_fr.json"
-STRUCTURED_OUTPUT_DE_FILE = "data/datasheets//processed/clean_pdf_json/product_specs_de.json"
+STRUCTURED_OUTPUT_EN_FILE = "data/datasheets/processed/clean_pdf_json/product_specs_en1.json"
+STRUCTURED_OUTPUT_FR_FILE = "data/datasheets//processed/clean_pdf_json/product_specs_fr1.json"
+STRUCTURED_OUTPUT_DE_FILE = "data/datasheets//processed/clean_pdf_json/product_specs_de1.json"
 
 # ---------- HELPER FUNCTIONS ----------
 def extract_text_from_pdf(pdf_path):

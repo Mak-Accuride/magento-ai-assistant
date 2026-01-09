@@ -16,4 +16,6 @@ def map_product_attributes(p):
         "country": extract_attribute(attrs, "country_of_manufacture"),
         "corrosion": extract_attribute(attrs, "corrosion_resistant") == "1",
         "category_ids": extract_attribute(attrs, "category_ids"),
+        "download_datasheet": extract_attribute(attrs, "download_datasheet"),
+        
     }

@@ -48,7 +48,7 @@ def build_structured_product(product):
     sku = product.get("sku")
     type_id = product.get("type_id")
 
-    structured = {
+    structured = { 
         "sku": sku,
         "name": product.get("name"),
         "type": type_id,
