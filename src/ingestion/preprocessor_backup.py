@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 import re
 from src.ingestion.clean.cleaners import clean_text, flatten_products, normalize_capacity, normalize_dimensions
-from src.ingestion.clean.transformers import map_product_attributes
+from ingestion.clean.transformers_backup import map_product_attributes
 from typing import Dict, Any, List
 
 RAW_DIR = Path("data/raw")

@@ -24,7 +24,7 @@ def load_cleaned_data(input_path: Optional[Path] = None) -> pd.DataFrame:
         pd.DataFrame: Loaded DataFrame.
     """
     if input_path is None:
-        input_path = PROCESSED_DIR / "clean_products_with_pdf.json"
+        input_path = PROCESSED_DIR / "clean_products_with_pdf_parent_child2.json"
     
     if not input_path.exists():
         raise FileNotFoundError(f"Cleaned data not found at {input_path}. Run preprocessor first.")

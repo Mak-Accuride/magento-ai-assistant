@@ -3,14 +3,8 @@ from datetime import datetime
 from pathlib import Path
 import re
 from typing import Dict, Any, List
-
-from src.ingestion.clean.cleaners import (
-    clean_text,
-    flatten_products,
-    normalize_capacity,
-    normalize_dimensions,
-)
-from src.ingestion.clean.transformers import map_product_attributes
+from src.ingestion.clean.transformers import map_product_attributes, map_child_product
+from src.ingestion.clean.cleaners import clean_text, normalize_capacity, normalize_dimensions
 
 RAW_DIR = Path("data/raw")
 PROCESSED_DIR = Path("data/processed")
@@ -21,24 +15,10 @@ PDF_EN_FILE = Path(
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def get_download_datasheet(product: Dict[str, Any]) -> str | None:
-    """
-    Extract download_datasheet attribute from Magento custom_attributes.
-    Returns normalized value like 'DB3832-EC-D'
-    """
-    for attr in product.get("custom_attributes", []):
-        if attr.get("attribute_code") == "download_datasheet":
-            val = attr.get("value")
-            if isinstance(val, str) and val.strip():
-                return val.strip()
-    return None
-
 # --------------------------------------------------
-# PDF LOADING
+# PDF LOADING (PARENT ONLY)
 # --------------------------------------------------
-
 def load_pdf_specs_en() -> Dict[str, Dict[str, Any]]:
-    """Load English structured PDF specs and index by SKU."""
     pdf_lookup = {}
 
     if not PDF_EN_FILE.exists():
@@ -50,23 +30,16 @@ def load_pdf_specs_en() -> Dict[str, Dict[str, Any]]:
 
     for spec in specs_list:
         sku = spec.get("product_id") or spec.get("sku")
-        if not sku:
-            continue
+        if sku:
+            pdf_lookup[sku] = {k: v for k, v in spec.items() if k not in {"product_id", "sku", "language"}}
 
-        # Exact key
-        pdf_lookup[sku] = spec
-
-        # Also index by normalized family (safety net)
-        pdf_lookup[normalize_sku_family(sku)] = spec
-
-    print(f"✅ Loaded {len(pdf_lookup)} PDF specs")
+    # print(f"✅ Loaded {len(pdf_lookup)} PDF specs")
     return pdf_lookup
 
 
 # --------------------------------------------------
 # HELPERS
 # --------------------------------------------------
-
 def clean_escapes(text):
     if not isinstance(text, str):
         return text
@@ -77,9 +50,6 @@ def clean_escapes(text):
         r'\\u00fc': 'ü',
         r'\\u00f6': 'ö',
         r'\\u00df': 'ß',
-        r'\\u00c4': 'Ä',
-        r'\\u00dc': 'Ü',
-        r'\\u00d6': 'Ö',
     }
 
     for pat, rep in replacements.items():
@@ -88,212 +58,107 @@ def clean_escapes(text):
     return text
 
 
-def dedupe_by_sku(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Merge duplicate SKUs, preferring non-empty values."""
-    merged = {}
-
-    for item in items:
-        sku = item.get("sku")
-        if not sku:
-            continue
-
-        if sku not in merged:
-            merged[sku] = item
-        else:
-            for k, v in item.items():
-                if merged[sku].get(k) in (None, "", []) and v not in (None, "", []):
-                    merged[sku][k] = v
-
-    return list(merged.values())
-
-
-# --------------------------------------------------
-# SKU NORMALIZATION (CRITICAL FIX)
-# --------------------------------------------------
-
-def normalize_sku_family(sku: str) -> str:
+def extract_attributes(attrs) -> dict:
     """
-    Normalize SKU to family form:
-    - Removes length segment (-0035, -0040, etc)
-    - Preserves compound suffixes (EC, EC-D, TR, TR-HD, etc)
-
-    Examples:
-    DB3832-0035EC-D → DB3832-EC-D
-    DB3832-EC-D     → DB3832-EC-D
-    DZ4505-0025     → DZ4505
-    DZ4501-0040EC   → DZ4501-EC
+    Extracts attributes from Magento custom_attributes.
+    Accepts a list of dicts, a single dict, or None.
     """
-    if not sku:
-        return sku
-
-    # Split base (letters+digits) from rest
-    m = re.match(r"^([A-Z]+\d+)(.*)$", sku)
-    if not m:
-        return sku
-
-    base, rest = m.groups()
-
-    # Remove length blocks like -0035 or -0040
-    rest = re.sub(r"-\d{3,4}", "", rest)
-
-    # Ensure suffix starts with hyphen if it exists
-    if rest and not rest.startswith("-"):
-        rest = "-" + rest
-
-    return base + rest
-
+    if isinstance(attrs, dict):
+        # Already a dictionary
+        return attrs
+    elif isinstance(attrs, list):
+        # List of attribute dicts
+        return {a["attribute_code"]: a.get("value") for a in attrs if isinstance(a, dict)}
+    else:
+        # Something else (string, None, etc.)
+        return {}
 
 
 # --------------------------------------------------
-# PARENT RESOLUTION
+# CORE TRANSFORM
 # --------------------------------------------------
+def build_child_product(parent, child, parent_attrs):
+    # Map parent & child
+    mapped_parent = map_product_attributes(parent)
+    mapped_child = map_child_product(child)
+    # print(f"Processing parent SKU: {mapped_parent['description']}")
+    # Full text for capacity & dimensions
+    full_text = f"{mapped_parent.get('description', '')} {mapped_parent.get('features', '')} {mapped_child.get('name', '')}"
+    dimensions = normalize_dimensions(full_text, mapped_child['sku'], mapped_child['name'])
+    capacity = normalize_capacity(full_text)
+    # pdf_specs = {}
+    # child_sku = mapped_child.get("sku")
+    # # Check if child or parent has a datasheet
+    # datasheet_url = mapped_child.get("download_datasheet") or mapped_parent.get("download_datasheet")
+    # # print(f"Child SKU: {child_sku}, Datasheet URL: {datasheet_url}")
+    # pdf_lookup = load_pdf_specs_en()
+    # if datasheet_url in pdf_lookup:
+    #     pdf_specs = pdf_lookup[datasheet_url]
+    #     # Only include matching PDF specs
+    #     # pdf_specs = {k: clean_escapes(str(v)) for k, v in parent.get("pdf_specs", {}).items()}
+    
+    # Inherited specs from parent PDF
+    inherited_specs = {k: clean_escapes(str(v)) for k, v in parent.get('pdf_specs', {}).items()}
 
-def build_parent_index(products: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-    """
-    Parents are ONLY products that have pdf_specs.
-    Indexed by normalized family SKU.
-    """
-    parents = {}
+    # Ensure length is numeric
+    try:
+        length_mm = mapped_child.get("length")
+    except (TypeError, ValueError):
+        length_mm = None
 
-    for p in products:
-        if p.get("sku") and p.get("pdf_specs"):
-            family = normalize_sku_family(p["sku"])
-            parents[family] = p
-
-    return parents
-
-
-def find_parent(product_sku: str, parents: Dict[str, Dict[str, Any]]):
-    """
-    Resolve parent via:
-    1. Normalized family SKU
-    2. Fallback: parent SKU is prefix of child SKU
-    """
-    if not product_sku:
-        return None
-
-    family = normalize_sku_family(product_sku)
-
-    # 1️⃣ Exact family match (preferred)
-    if family in parents:
-        return parents[family]
-
-    # 2️⃣ Fallback: prefix match (DZ4505 → DZ4505-0025)
-    for parent_family, parent in parents.items():
-        parent_sku = parent.get("sku")
-        if parent_sku and product_sku.startswith(parent_sku + "-"):
-            return parent
-
-    return None
-
-
-# --------------------------------------------------
-# INHERITANCE LOGIC
-# --------------------------------------------------
-
-def propagate_shared_data(
-    products: List[Dict[str, Any]]
-) -> List[Dict[str, Any]]:
-    """Propagate shared pdf_specs fields from parent to children."""
-    parents = build_parent_index(products)
-    enriched = []
-
-    for prod in products:
-        sku = prod.get("sku")
-        if not sku:
-            enriched.append(prod)
-            continue
-
-        parent = find_parent(sku, parents)
-
-        # Skip if this product IS the parent
-        if not parent or parent is prod:
-            enriched.append(prod)
-            continue
-
-        pdf = parent.get("pdf_specs", {})
-
-        prod["inherited_specs"] = {
-            "load_rating": pdf.get("load_rating"),
-            "slide_extension": pdf.get("slide_extension"),
-            "slide_height": pdf.get("slide_height"),
-            "slide_thickness": pdf.get("slide_thickness"),
-            "temperature_range": pdf.get("temperature_range"),
-            "main_material": pdf.get("main_material"),
-            "finish": pdf.get("finish"),
-            "features_summary": pdf.get("features"),
-        }
-
-        print(
-            f"Propagated specs → child {sku} ← parent {parent['sku']}"
-        )
-
-        enriched.append(prod)
-
-    return enriched
-
-
-# --------------------------------------------------
-# FINAL CLEANING
-# --------------------------------------------------
-
-def clean_product(p: Dict[str, Any]) -> Dict[str, Any]:
-    mapped = map_product_attributes(p)
-
-    full_text = (
-        f"{mapped.get('description', '')} "
-        f"{mapped.get('features', '')} "
-        f"{p.get('name', '')}"
-    )
-
-    dimensions = normalize_dimensions(
-        full_text, p.get("sku", ""), p.get("name", "")
-    )
-    capacity = normalize_capacity(full_text) or normalize_capacity(
-        mapped.get("description", "")
-    )
-
-    if "inherited_specs" in p:
-        for k in p["inherited_specs"]:
-            p["inherited_specs"][k] = clean_escapes(
-                p["inherited_specs"][k]
-            )
-
+    # Build cleaned record
     cleaned = {
-        "sku": p.get("sku"),
-        "name": clean_text(p.get("name", "")),
-        "description": clean_text(mapped.get("description", "")),
-        "features": clean_text(mapped.get("features", "")),
-        "material": mapped.get("material"),
-        "length_mm": (
-            int(mapped.get("length"))
-            if str(mapped.get("length")).isdigit()
-            else None
-        ),
+        "parent_sku": parent.get("sku"),
+        "sku": mapped_child["sku"],
+        "name": mapped_child["name"],
+        "description": mapped_parent.get("description"),
+        "short_description": mapped_parent.get("short_description"),
+        "product_features": mapped_parent.get("product_features"),
+        "material": mapped_parent.get("material"),
+        "length_mm": length_mm,
         "dimensions": dimensions,
         "capacity": capacity,
-        "weight_kg": p.get("weight"),
-        "corrosion_resistant": mapped.get("corrosion_resistant", False),
-        "uom": mapped.get("uom"),
-        "country_of_manufacture": mapped.get("country_of_manufacture"),
-        "category_id": (
-            mapped.get("category_ids")[0]
-            if isinstance(mapped.get("category_ids"), list)
-            and mapped.get("category_ids")
-            else None
-        ),
-        "inherited_specs": p.get("inherited_specs"),
+        "weight_kg": mapped_child.get("weight"),
+        "uom": mapped_parent.get("uom"),
+        "country_of_manufacture": mapped_parent.get("country_of_manufacture"),
+        "category_id": mapped_parent.get("category_ids")[0] if mapped_parent.get("category_ids") else None,
+        "inherited_specs": inherited_specs,
+        "prices": mapped_child.get("prices"),
+        "download_datasheet": mapped_parent.get("download_datasheet"),
+        # --- Add all remaining custom attributes from parent ---
+        "mpn": mapped_parent.get("mpn"),
+        "gtin": mapped_parent.get("gtin"),
+        "hub_product_id": mapped_parent.get("hub_product_id"),
+        "commodity_code": mapped_parent.get("commodity_code"),
+        "finish": mapped_parent.get("finish"),
+        "tax_class_id": mapped_parent.get("tax_class_id"),
+        "product_for_sales": mapped_parent.get("product_for_sales"),
+        "is_top_choice": mapped_parent.get("is_top_choice"),
+        "is_returnable": mapped_parent.get("is_returnable"),
+        "soft_close": mapped_parent.get("soft_close"),
+        "self_close": mapped_parent.get("self_close"),
+        "self_open": mapped_parent.get("self_open"),
+        "hold_in": mapped_parent.get("hold_in"),
+        "hold_out": mapped_parent.get("hold_out"),
+        "lock_in": mapped_parent.get("lock_in"),
+        "lock_out": mapped_parent.get("lock_out"),
+        "interlock": mapped_parent.get("interlock"),
+        "cam_adjust": mapped_parent.get("cam_adjust"),
+        "rohs": mapped_parent.get("rohs"),
+        "bhma": mapped_parent.get("bhma"),
+        "awi": mapped_parent.get("awi"),
+        "weather_resistant": mapped_parent.get("weather_resistant"),
+        "corrosion_resistant": mapped_parent.get("corrosion_resistant"),
+        "required_options": mapped_parent.get("required_options"),
+        "has_options": mapped_parent.get("has_options"),
+        "options_container": mapped_parent.get("options_container"),
+        "gift_message_available": mapped_parent.get("gift_message_available"),
+        "gift_wrapping_available": mapped_parent.get("gift_wrapping_available"),
+        "subaccount": mapped_parent.get("subaccount"),
+        "project_number": mapped_parent.get("project_number"),
+        # "pdf_specs": pdf_specs,
         "timestamp": datetime.utcnow().isoformat(),
     }
-
-    # Parent keeps pdf_specs, children never do
-    if p.get("pdf_specs"):
-        cleaned["pdf_specs"] = {
-            k: v
-            for k, v in p["pdf_specs"].items()
-            if k not in {"product_id", "sku", "language"}
-        }
-        cleaned.pop("inherited_specs", None)
 
     return cleaned
 
@@ -301,10 +166,9 @@ def clean_product(p: Dict[str, Any]) -> Dict[str, Any]:
 # --------------------------------------------------
 # PIPELINE
 # --------------------------------------------------
-
 def preprocess_all():
     input_file = RAW_DIR / "magento_products_full.json"
-    output_file = PROCESSED_DIR / "clean_products_with_pdf_newfile.json"
+    output_file = PROCESSED_DIR / "clean_products_with_pdf_parent_child2.json"
 
     if not input_file.exists():
         print(f"❌ Missing input: {input_file}")
@@ -314,40 +178,43 @@ def preprocess_all():
         data = json.load(f)
 
     items = data.get("items", []) if isinstance(data, dict) else data
-    items = flatten_products(items)
-    items = dedupe_by_sku(items)
-
     pdf_lookup = load_pdf_specs_en()
 
-    for item in items:
-        # 1️⃣ Try Magento datasheet attribute (BEST)
-        datasheet_ref = get_download_datasheet(item)
+    output_products = []
 
-        spec = None
-        if datasheet_ref and datasheet_ref in pdf_lookup:
-            spec = pdf_lookup[datasheet_ref]
-            print(f"📄 PDF matched via datasheet attribute → {item['sku']} ← {datasheet_ref}")
+    for parent in items:
+        parent_sku = parent.get("sku")
+        parent_attrs = extract_attributes(parent.get("custom_attributes"))
 
-        # 2️⃣ Fallback: SKU-based match
-        if not spec:
-            sku = item.get("sku")
-            if sku in pdf_lookup:
-                spec = pdf_lookup[sku]
+        # Attach PDF specs if available
+        if parent_sku in pdf_lookup:
+            parent["pdf_specs"] = pdf_lookup[parent_sku]
 
-        if spec:
-            item["pdf_specs"] = {
-                k: v
-                for k, v in spec.items()
-                if k not in {"product_id", "sku", "language"}
-            }
+        # Include the parent itself in output
+        # mapped_parent = map_product_attributes(parent)
+        # parent_record = {
+        #     "sku": parent_sku,
+        #     "name": parent.get("name"),
+        #     "description": mapped_parent.get("description"),
+        #     "product_features": mapped_parent.get("product_features"),
+        #     "material": mapped_parent.get("material"),
+        #     "uom": mapped_parent.get("uom"),
+        #     "country_of_manufacture": mapped_parent.get("country"),
+        #     "category_id": mapped_parent.get("category_ids")[0] if mapped_parent.get("category_ids") else None,
+        #     "pdf_specs": parent.get("pdf_specs"),
+        #     "timestamp": datetime.utcnow().isoformat(),
+        # }
+        # output_products.append(parent_record)
 
-    items = propagate_shared_data(items)
-    cleaned = [clean_product(i) for i in items]
+        # Process children
+        children = parent.get("children", [])
+        for child in children:
+            output_products.append(build_child_product(parent, child, parent_attrs))
 
     with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(cleaned, f, indent=2, ensure_ascii=False)
+        json.dump(output_products, f, indent=2, ensure_ascii=False)
 
-    print(f"✅ Saved {len(cleaned)} products → {output_file}")
+    print(f"✅ Saved {len(output_products)} child products → {output_file}")
 
 
 if __name__ == "__main__":

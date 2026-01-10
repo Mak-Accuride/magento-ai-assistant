@@ -11,7 +11,7 @@ from langchain_core.documents import Document
 # PATHS
 # ========================
 
-PROCESSED_FILE = Path("data/processed/magento_products_cleaned.json")
+PROCESSED_FILE = Path("data/processed/clean_products_with_pdf_parent_child2.json")
 EMBEDDING_DIR = Path("data/embeddings")
 EMBEDDING_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -41,6 +41,7 @@ class ProductFAISSBuilder:
     def build_text(self, p: dict) -> str:
         """Build semantic text for embedding"""
         parts = [
+            p.get("sku", ""),
             p.get("name", ""),
             p.get("short_description", ""),
             p.get("description", ""),
