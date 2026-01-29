@@ -47,7 +47,7 @@ Answer (clear, factual, concise):
 
 if __name__ == "__main__":
     qa = build_rag_chain()
-    query = "Do you have a 550 liter chest freezer?"
+    query = "Do you have a 550 liter chest freezer slide?"
     result = qa.invoke({"input": query})
     print("Answer:", result["answer"])
     if "context" in result:
