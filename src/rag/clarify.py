@@ -4,12 +4,9 @@ def needs_clarification(query: str) -> bool:
     """
     Detect vague or underspecified queries.
     """
-    return len(query.split()) <= 2
+    vague_words = ["this", "that", "it", "those", "these"]
+    return any(word in query.lower() for word in vague_words)
 
 
 def clarification_prompt(query: str) -> str:
-    return (
-        f"I found multiple possibilities for '{query}'. "
-        "Could you clarify what you're looking for? "
-        "For example: size, capacity, or product type."
-    )
+    return f"I'm not sure what you mean by '{query}'. Could you clarify?"
