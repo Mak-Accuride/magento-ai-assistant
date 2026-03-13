@@ -1,36 +1,58 @@
 # src/rag/intent.py
 
-from enum import Enum
+import re
 
-class Intent(str, Enum):
-    PRODUCT_SEARCH = "product_search"
-    PRODUCT_QUESTION = "product_question"
-    GENERAL_QUESTION = "general_question"
-    OFF_TOPIC = "off_topic"
+# src/rag/intent.py
 
-# Keywords tailored to Accuride products
-PRODUCT_KEYWORDS = [
-    "slide", "drawer", "ball bearing", "mounting", "capacity", "liter",
-    "model", "disconnect", "full extension", "hold-in", "soft-close",
-    "self-close", "corrosion", "finish", "material", "length", "width",
-    "load", "temperature", "dimensions"
-]
+INTENT_PATTERNS = {
+    "spec_compare": ["compare", "difference", "vs", "versus", "better", "which one"],
+    "price_query": ["price", "cost", "cheap", "expensive", "how much", "affordable"],
+    "load_capacity": ["kg", "load", "weight", "capacity", "heavy", "support", "hold"],
+    "product_query": ["slide", "drawer", "pocket door", "telescopic", "extension","soft close", "self close", "locking", "corrosion", "stainless"],
+    "dimension_query": ["mm", "size", "length", "width", "depth", "dimension"],
+    "warranty_query": ["warranty", "guarantee", "defect", "return", "replacement"],
+    "application_query": ["kitchen", "office", "industrial", "medical", "outdoor","cabinet", "wardrobe", "freezer", "tool box", "rack", "toolbox"],
+    "general_info": ["hello", "hi", "help", "what can you", "who are you"],
+    "off_topic": ["cook", "recipe", "weather", "sport", "news", "movie"]
+}
 
-GENERAL_QUESTION_KEYWORDS = ["how", "what", "why", "when", "where", "who"]
+OFF_TOPIC_REPLY = "I specialise in sliding systems and drawer slides. Can I help you find the right slide for your project?"
 
-def classify_intent(query: str) -> Intent:
-    q = query.lower()
+def detect_intent(query: str) -> str:
+    query_lower = query.lower()
+    for intent, keywords in INTENT_PATTERNS.items():
+        if any(kw in query_lower for kw in keywords):
+            return intent
+    return "unknown"
 
-    # Check if query matches known product-related keywords
-    if any(k.lower() in q for k in PRODUCT_KEYWORDS):
-        return Intent.PRODUCT_QUESTION
+def is_off_topic(intent: str) -> bool:
+    return intent == "off_topic"
 
-    # Check for general informational questions
-    if any(q.startswith(w) for w in GENERAL_QUESTION_KEYWORDS):
-        return Intent.GENERAL_QUESTION
+def needs_clarification(intent: str) -> bool:
+    return intent in ("unknown", "off_topic")
 
-    # Short queries are usually product searches (e.g., "DZ4501 slide")
-    if len(q.split()) <= 3:
-        return Intent.PRODUCT_SEARCH
 
-    return Intent.OFF_TOPIC
+def get_clarification_prompt(intent: str) -> str:
+    return CLARIFY_PROMPTS.get(intent, CLARIFY_PROMPTS["unknown"])
+
+
+# --- Test ---
+if __name__ == "__main__":
+    test_queries = [
+        "kitchen drawers",
+        "compare heavy duty vs standard",
+        "how much does this cost?",
+        "does it hold 200kg?",
+        "how to cook pasta",
+        "hello",
+        "I need something for a tool box",
+    ]
+
+    for q in test_queries:
+        intent = detect_intent(q)
+        clarify = needs_clarification(intent)
+        print(f"Q: {q}")
+        print(f"   Intent: {intent} | Needs clarification: {clarify}")
+        if clarify:
+            print(f"   Bot: {get_clarification_prompt(intent)}")
+        print()

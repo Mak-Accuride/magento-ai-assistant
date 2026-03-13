@@ -11,21 +11,21 @@ META_FILE = EMBED_DIR / "product_metadata.json"
 
 class ProductRetriever:
     def __init__(self, model_name="sentence-transformers/all-MiniLM-L12-v2"):
-        print("🧠 Loading embedding model...")
+        # print("🧠 Loading embedding model...")
         self.embeddings = HuggingFaceEmbeddings(model_name=model_name)
 
-        print("📦 Loading metadata...")
+        # print("📦 Loading metadata...")
         with open(META_FILE, "r") as f:
             self.metadata = json.load(f)
 
-        print("🔗 Loading FAISS index from disk...")
+        # print("🔗 Loading FAISS index from disk...")
         # self.vectorstore = FAISS.load_local(EMBED_DIR, embeddings=self.embeddings)
         self.vectorstore = FAISS.load_local(
             EMBED_DIR,
             embeddings=self.embeddings,
             allow_dangerous_deserialization=True  # ⚠️ Only for trusted local files
         )
-        print("✅ Retriever ready!")
+        # print("✅ Retriever ready!")
 
     def get_retriever(self, top_k=5):
         return self.vectorstore.as_retriever(search_kwargs={"k": top_k})
