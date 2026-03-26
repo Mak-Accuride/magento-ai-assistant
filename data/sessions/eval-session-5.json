@@ -1,0 +1,58 @@
+[
+  {
+    "timestamp": "2026-03-13T09:44:43.447824",
+    "user": "I need slides for a medical trolley",
+    "intent": "collecting_requirements",
+    "answer": "What load capacity do you need? (e.g. 45kg, 100kg, 200kg)",
+    "products": []
+  },
+  {
+    "timestamp": "2026-03-13T09:44:43.448052",
+    "user": "Does it have a locking mechanism?",
+    "intent": "collecting_requirements",
+    "answer": "What load capacity do you need? (e.g. 45kg, 100kg, 200kg)",
+    "products": []
+  },
+  {
+    "timestamp": "2026-03-13T09:44:43.448221",
+    "user": "around 50kg",
+    "intent": "collecting_requirements",
+    "answer": "What length do you need? (e.g. 300mm, 500mm, 700mm)",
+    "products": []
+  },
+  {
+    "timestamp": "2026-03-13T09:44:46.316650",
+    "user": "400mm",
+    "intent": "dimension_query",
+    "answer": "The DZ3630-0045 Two-Way Travel Full Extension Drawer Slide with a load rating of up to 45kg and a length of 450mm could be suitable for your medical trolley. However, since you require a load capacity of 50.0kg, you may want to consider a different slide model that can accommodate the higher weight requirement.",
+    "products": [
+      {
+        "sku": "DZ3507-0030",
+        "name": "Medium Duty Slide with Lock-Out and Disconnect 762mm DZ3507-0030"
+      },
+      {
+        "sku": "DZ3507-0020",
+        "name": "Medium Duty Slide with Lock-Out and Disconnect 508mm DZ3507-0020"
+      },
+      {
+        "sku": "DZ3507-0018",
+        "name": "Medium Duty Slide with Lock-Out and Disconnect 457mm DZ3507-0018"
+      },
+      {
+        "sku": "DZ3607-0020-2",
+        "name": "Heavy Duty Telescopic Slide 508mm DZ3607-0020-2"
+      },
+      {
+        "sku": "DZ3630-0045",
+        "name": "Two-Way Travel Full Extension Drawer Slide 450mm DZ3630-0045"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-03-13T09:44:46.317274",
+    "user": "locking",
+    "intent": "collecting_requirements",
+    "answer": "What load capacity do you need? (e.g. 45kg, 100kg, 200kg)",
+    "products": []
+  }
+]

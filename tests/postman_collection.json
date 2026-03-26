@@ -1,0 +1,112 @@
+{
+  "info": {
+    "name": "Week 7 - AI Magento Search API",
+    "description": "Postman collection for Week 7 FastAPI endpoints",
+    "version": "1.0.0"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "Search Products",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"refrigerator with ice maker\",\n  \"top_k\": 5,\n  \"language\": \"en\",\n  \"filters\": {\n    \"category\": \"appliances\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/search",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "search"]
+        }
+      }
+    },
+    {
+      "name": "Chat Message",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"Which refrigerator has the largest capacity?\",\n  \"session_id\": \"sess_test_123\",\n  \"language\": \"en\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/chat",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "chat"]
+        }
+      }
+    },
+    {
+      "name": "Chat (Follow-up)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"Compare that with the Samsung model\",\n  \"session_id\": \"sess_test_123\",\n  \"language\": \"en\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/chat",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "chat"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "api_key",
+      "value": "dev-key-change-in-production"
+    }
+  ]
+}

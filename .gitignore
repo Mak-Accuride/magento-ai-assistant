@@ -125,3 +125,9 @@ scripts/pdf/installation_guides/
 installation_guides/
 # Ignore installation guide PDFs
 scripts/pdf/installation_guides/
+
+.env.example
+.env
+
+.env
+.env.*

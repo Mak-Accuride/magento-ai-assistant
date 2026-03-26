@@ -2,7 +2,8 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_classic.chains import create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
-
+from dotenv import load_dotenv
+load_dotenv()
 from src.rag.retriever import ProductRetriever
 
 import os
@@ -12,7 +13,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 def build_rag_chain():
     # Load your FAISS retriever
     retriever = ProductRetriever().get_retriever(top_k=5)
-
+    # print("API KEY:", OPENAI_API_KEY)
     # LLM
     llm = ChatOpenAI(
         model_name="gpt-3.5-turbo",

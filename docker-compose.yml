@@ -1,0 +1,92 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: magento_ai_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - magento_ai_network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: magento_ai_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: magento_ai
+      POSTGRES_PASSWORD: magento_ai_secret
+      POSTGRES_DB: magento_ai_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U magento_ai -d magento_ai_db"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    networks:
+      - magento_ai_network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: magento_ai_api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"  # Host:Container
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql://magento_ai:magento_ai_secret@postgres:5432/magento_ai_db
+      HOST: 0.0.0.0
+      PORT: 8080  # Must match exposed port
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      API_KEY: ${API_KEY:-dev-key-change-in-production}
+      LOG_LEVEL: INFO
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./src:/app/src
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - magento_ai_network
+    # IMPORTANT: Use port 8080 here
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8080 --reload --log-level info
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: magento_ai_redisinsight
+    restart: unless-stopped
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsight_data:/db
+    depends_on:
+      - redis
+    networks:
+      - magento_ai_network
+
+volumes:
+  redis_data:
+  postgres_data:
+  redisinsight_data:
+
+networks:
+  magento_ai_network:
+    driver: bridge

@@ -1,0 +1,44 @@
+[
+  {
+    "timestamp": "2026-03-13T09:44:34.064216",
+    "user": "What slides do you have for kitchen drawers?",
+    "intent": "collecting_requirements",
+    "answer": "What load capacity do you need? (e.g. 45kg, 100kg, 200kg)",
+    "products": []
+  },
+  {
+    "timestamp": "2026-03-13T09:44:37.000427",
+    "user": "Which one has the best soft close?",
+    "intent": "spec_compare",
+    "answer": "The DZ3135-EC undermount soft close slide with a load rating of up to 45kg has the best soft close feature among the options provided.",
+    "products": [
+      {
+        "sku": "DZ3135-0050EC",
+        "name": "Undermount Soft Close Slide 500 mm DZ3135-0050EC"
+      },
+      {
+        "sku": "DZ3135-0045EC",
+        "name": "Undermount Soft Close Slide 450 mm DZ3135-0045EC"
+      },
+      {
+        "sku": "DZ3135-0040EC",
+        "name": "Undermount Soft Close Slide 400 mm DZ3135-0040EC"
+      },
+      {
+        "sku": "DZ3135-0035EC",
+        "name": "Undermount Soft Close Slide 350 mm DZ3135-0035EC"
+      },
+      {
+        "sku": "DZ3135-0030EC",
+        "name": "Undermount Soft Close Slide 300 mm DZ3135-0030EC"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-03-13T09:44:37.001358",
+    "user": "What is the load capacity?",
+    "intent": "collecting_requirements",
+    "answer": "What load capacity do you need? (e.g. 45kg, 100kg, 200kg)",
+    "products": []
+  }
+]

@@ -1,0 +1,30 @@
+[
+  {
+    "timestamp": "2026-03-13T09:44:43.447441",
+    "user": "Does your product include a warranty?",
+    "intent": "warranty_query",
+    "answer": "Yes, the product includes a lifetime guarantee against defects in material and workmanship.",
+    "products": [
+      {
+        "sku": "DH3832-0045",
+        "name": "Corrosion Resistant Telescopic Slide 450mm DH3832-0045"
+      },
+      {
+        "sku": "DH3832-0065",
+        "name": "Corrosion Resistant Telescopic Slide 650mm DH3832-0065"
+      },
+      {
+        "sku": "DH3832-0015",
+        "name": "Corrosion Resistant Telescopic Slide 150mm DH3832-0015"
+      },
+      {
+        "sku": "DH3832-0035",
+        "name": "Corrosion Resistant Telescopic Slide 350mm DH3832-0035"
+      },
+      {
+        "sku": "DH3832-0050",
+        "name": "Corrosion Resistant Telescopic Slide 500mm DH3832-0050"
+      }
+    ]
+  }
+]

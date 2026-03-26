@@ -1,0 +1,16 @@
+[
+  {
+    "timestamp": "2026-03-13T09:44:40.990949",
+    "user": "how to cook pasta",
+    "intent": "off_topic",
+    "answer": "I specialise in sliding systems and drawer slides. Can I help you find the right slide for your project?",
+    "products": []
+  },
+  {
+    "timestamp": "2026-03-13T09:44:40.991185",
+    "user": "what is the weather today",
+    "intent": "off_topic",
+    "answer": "I specialise in sliding systems and drawer slides. Can I help you find the right slide for your project?",
+    "products": []
+  }
+]

@@ -1,0 +1,30 @@
+[
+  {
+    "timestamp": "2026-03-13T09:44:40.990496",
+    "user": "Compare heavy duty vs standard drawer slides",
+    "intent": "spec_compare",
+    "answer": "Heavy-duty drawer slides are designed to support heavier loads compared to standard drawer slides. They typically have a higher load rating, for example, up to 120kg or more, while standard drawer slides may have a lower load capacity. Heavy-duty slides are ideal for industrial and wider drawers, providing durability and strength for demanding applications. They often feature additional qualities such as over-extension for full accessibility and hold-in detents to prevent roll-out or bounce-back.\n\nOn the other hand, standard drawer slides are suitable for lighter applications and may not offer the same level of load capacity or durability as heavy-duty slides. They are commonly used in residential furniture or cabinets where the load is lighter and less demanding.\n\nIn summary, heavy-duty drawer slides are built for heavy loads, industrial use, and durability, while standard drawer slides are more suited for lighter applications and residential use.",
+    "products": [
+      {
+        "sku": "DZ5321-6030",
+        "name": "Heavy Duty Drawer Slide with Bracket 300mm DZ5321-6030"
+      },
+      {
+        "sku": "DZ5321-6035",
+        "name": "Heavy Duty Drawer Slide with Bracket 350mm DZ5321-6035"
+      },
+      {
+        "sku": "DZ5321-6070",
+        "name": "Heavy Duty Drawer Slide with Bracket 700mm DZ5321-6070"
+      },
+      {
+        "sku": "DZ5321-6045",
+        "name": "Heavy Duty Drawer Slide with Bracket 450mm DZ5321-6045"
+      },
+      {
+        "sku": "DZ5321-0040",
+        "name": "Heavy Duty Over Travel Slide 400mm DZ5321-0040"
+      }
+    ]
+  }
+]

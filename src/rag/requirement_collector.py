@@ -23,6 +23,7 @@ FOLLOWUP_SIGNALS = [
     "which one", "can it", "will it", "tell me more", "what about",
     "and the", "that one", "those", "this one"
 ]
+
 def extract_load(text: str):
     """Extract kg value from text like 'around 100kg' or '200 kg'"""
     match = re.search(r'(\d+)\s*kg', text.lower())
@@ -95,6 +96,7 @@ def is_followup_question(text: str) -> bool:
     """Returns True if this looks like a follow-up about a previously shown product"""
     text_lower = text.lower().strip()
     return any(text_lower.startswith(signal) for signal in FOLLOWUP_SIGNALS)
+
 def extract_features_from_followup(text: str, reqs: dict) -> dict:
     """Extract slide_type from a follow-up question like 'does it have locking?'"""
     text_lower = text.lower()
